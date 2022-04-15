@@ -1,0 +1,7 @@
+# Project exclude paths
+/foodie-martin-adapter/target/
+/foodie-martin-common/target/
+/foodie-martin-domain/target/
+/foodie-martin-mapper/target/
+/foodie-martin-service/target/
+/start/target/

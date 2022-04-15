@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+
+    <springProperty name="spring.application.name" source="spring.application.name"/>
+
+    <property name="DEV_HOME" value="."/>
+    <property name="LOG_LEVEL_PATTERN"
+              value="%clr(%5p) %clr([${spring.application.name:-},%X{Z-VISITOR:-},%X{X-B3-TraceId:-},%X{X-B3-SpanId:-},%X{X-Span-Export:-}]){yellow}"/>
+    <property name="CONSOLE_LOG_PATTERN"
+              value="${CONSOLE_LOG_PATTERN:-%clr(%d{MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%10.10t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
+
+    <!-- 这里面定义了 CONSOLE_LOG_PATTERN, FILE_LOG_PATTERN 等日志格式, 还定义了一些日志级别 -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+
+    <!-- RollingFileAppender：滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 -->
+    <!-- 以下的大概意思是：1.先按日期存日志，日期变了，将前一天的日志文件名重命名为XXX%日期%索引，新的日志仍然是sys.log -->
+    <!--             2.如果日期没有发生变化，但是当前日志的文件大小超过1KB时，对当前日志进行分割 重命名-->
+    <appender name="fileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 把日志文件输出到:项目启动的目录下的log文件夹(无则自动创建)下 -->
+        <file>${DEV_HOME}/debug.log</file>
+        <!-- 把日志文件输出到:name为logFilePositionDir的property标签指定的位置下 -->
+        <!-- <file>${logFilePositionDir}/logFile.log</file> -->
+        <!-- 把日志文件输出到:当前磁盘下的log文件夹(无则自动创建)下 -->
+        <!-- <file>/log/logFile.log</file> -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- TimeBasedRollingPolicy策略会将过时的日志，另存到指定的文件中(无该文件则创建) -->
+            <!-- 把因为 过时 或 过大  而拆分后的文件也保存到目启动的目录下的log文件夹下  -->
+            <fileNamePattern>${DEV_HOME}/debug.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!-- 设置过时时间(单位:<fileNamePattern>标签中%d里最小的时间单位) -->
+            <!-- 系统会删除(分离出去了的)过时了的日志文件 -->
+            <!-- 本人这里:保存以最后一次日志为准,往前7天以内的日志文件 -->
+            <MaxHistory> 30 </MaxHistory>
+            <!-- 滚动策略可以嵌套；
+                     这里嵌套了一个SizeAndTimeBasedFNATP策略，
+                        主要目的是: 在每天都会拆分日志的前提下，
+                        当该天的日志大于规定大小时，
+                        也进行拆分并以【%i】进行区分，i从0开始
+            -->
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder>
+            <!-- 日志输出格式 -->
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%L- %msg%n</pattern>
+            <!-- 日志编码 -->
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+
+
+
+    <!-- %m输出的信息,%p日志级别,%t线程名,%d日期,%c类的全名,%i索引【从数字0开始递增】,,, -->
+    <!-- appender是configuration的子节点，是负责写日志的组件。 -->
+    <!-- ConsoleAppender：把日志输出到控制台 -->
+    <appender name="consoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+        </filter>
+
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%L- %msg%n</pattern>
+            <!-- 日志编码 -->
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/Users/workspace/logs/${spring.application.name:-application}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>/Users/workspace/logs/${spring.application.name:-application}.log.%d{yyyy-MM-dd}
+            </fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <!--
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.TraceIdPatternLogbackLayout">
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%tid] [%thread] %-5level %logger{36} -%msg%n</Pattern>
+            </layout>
+        </encoder>
+         -->
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+
+    </appender>
+
+    <!--<appender name="dingTalkAppenderSync" class="cn.quantgroup.dinglog.logback.appender.DingTalkAppenderUnSync">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            &lt;!&ndash;格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符 &ndash;&gt;
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        &lt;!&ndash; 自定义参数 &ndash;&gt;
+        <dingTalkLogbackParam>
+            <sendMsg>true</sendMsg>
+            &lt;!&ndash;项目名 加框&ndash;&gt;
+            <markMsg>【foodie-martin-adapter】</markMsg>
+            &lt;!&ndash; 钉钉的token 如果要发送钉钉的话，就配置，不发送钉钉，配置为空&ndash;&gt;
+            <webHookAccessToken></webHookAccessToken>
+            &lt;!&ndash;是否为日志格式的标准输出： true false （默认使用false，属于一种简化版输出）&ndash;&gt;
+            <layoutLog>false</layoutLog>
+            <warnLevel>ERROR</warnLevel>
+            <collectUrl>http://killbugs.xyqb.com/kill_bugs/error/error-msg/accept</collectUrl>
+        </dingTalkLogbackParam>
+    </appender>-->
+
+    <!-- 异步输出 -->
+    <!--<appender name="dingTalkAppenderAsync" class="ch.qos.logback.classic.AsyncAppender">
+        &lt;!&ndash; 不丢失日志.默认的,如果队列的80%已满,则会丢弃TRACT、DEBUG、INFO级别的日志 &ndash;&gt;
+        <discardingThreshold>0</discardingThreshold>
+        &lt;!&ndash; 更改默认的队列的深度,该值会影响性能.默认值为256 &ndash;&gt;
+        <queueSize>512</queueSize>
+        &lt;!&ndash; 添加附加的appender,最多只能添加一个 &ndash;&gt;
+        <appender-ref ref="dingTalkAppenderSync"/>
+    </appender>-->
+
+
+    <!-- 指定项目中某个包，当有日志操作行为时的日志记录级别 -->
+    <!-- com.imooc为根包，也就是只要是发生在这个根包下面的所有日志操作行为的权限都是DEBUG -->
+    <!-- 级别依次为【从高到低】：FATAL > ERROR > WARN > INFO > DEBUG > TRACE  -->
+    <logger name="feign.Logger" level="DEBUG"/>
+    <logger name="com.imooc" level="DEBUG"/>
+    <logger name="org.springframework" level="warn"/>
+    <logger name="org.apache.ibatis" level="DEBUG"/>
+    <logger name="java.sql.Connection" level="DEBUG"/>
+    <logger name="java.sql.Statement" level="DEBUG"/>
+    <logger name="java.sql.PreparedStatement" level="DEBUG"/>
+    <logger name="org.hibernate" level="DEBUG"/>
+    <logger name="org.apache" level="warn"/>
+    <logger name="ch.qos.logback" level="warn"/>
+    <!--关闭钉钉内部的异常日志-->
+    <logger name="topsdk" level="OFF"/>
+
+
+
+    <!-- 控制台输出日志级别 -->
+    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="consoleAppender"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- 控制台输出日志级别 -->
+    <springProfile name="pro">
+        <root level="INFO">
+            <appender-ref ref="FILE"/>
+            <!--<appender-ref ref="dingTalkAppenderAsync"/>-->
+        </root>
+    </springProfile>
+
+</configuration>
